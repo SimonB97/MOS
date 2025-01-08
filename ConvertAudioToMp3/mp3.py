@@ -15,7 +15,7 @@ from typing import List, Tuple
 
 def get_default_workers() -> int:
     cpu_count = multiprocessing.cpu_count()
-    return max(1, cpu_count // 2)  # Use 50% of CPUs by default
+    return max(1, cpu_count // 2)
 
 def check_ffmpeg() -> bool:
     try:
@@ -44,10 +44,10 @@ def convert_file(file_data: Tuple[Path, Path]) -> Tuple[str, bool, str]:
 
 @click.command(help="Convert audio files to MP3 format using ffmpeg")
 @click.argument('input_path', type=click.Path(exists=True))
-@click.option('--output', '-o', type=click.Path(), required=True, help="Output directory")
+@click.option('--output', '-o', type=click.Path(), help="Output directory (default: ./mp3)")
 @click.option('--workers', '-w', type=int, default=None, 
             help="Number of parallel workers (default: 50% of CPU cores)")
-def convert(input_path: str, output: str, workers: int) -> None:
+def convert(input_path: str, output: str | None, workers: int) -> None:
     if not check_ffmpeg():
         print("Error: ffmpeg not found. Please install ffmpeg first.")
         print("Windows: winget install ffmpeg")
@@ -58,8 +58,8 @@ def convert(input_path: str, output: str, workers: int) -> None:
     max_workers = workers or get_default_workers()
     
     src = Path(input_path)
-    dst = Path(output)
-    dst.mkdir(exist_ok=True)
+    dst = Path(output) if output else Path.cwd() / 'mp3'
+    dst.mkdir(exist_ok=True, parents=True)
 
     if src.is_file():
         files = [src]
@@ -72,8 +72,12 @@ def convert(input_path: str, output: str, workers: int) -> None:
 
     conversion_tasks: List[Tuple[Path, Path]] = []
     for f in files:
-        rel = f.relative_to(src) if src.is_dir() else f.name
-        out = dst / rel.with_suffix('.mp3')
+        if src.is_dir():
+            rel = f.relative_to(src)
+            out = dst / rel.with_suffix('.mp3')
+        else:
+            out = dst / f.with_suffix('.mp3').name
+            
         out.parent.mkdir(parents=True, exist_ok=True)
         conversion_tasks.append((f, out))
 
