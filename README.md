@@ -1,4 +1,4 @@
-# My Open Scripts
+# [My](https://github.com/SimonB97) Open Scripts
 
 This is a collection of (mainly Python-) scripts that I have written (or modified) for a number of different tasks. I have made them available here in the hope that they may be useful to others.
 
