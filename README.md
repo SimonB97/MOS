@@ -7,7 +7,7 @@ These scripts are designed to be run from the command line with minimal friction
 This is why the Python-scripts include a special frontmatter which allows the **awesome** [uv](https://docs.astral.sh/uv/) Python package manager to run them 'instantly', that is, without the need to install any dependencies manually first because `uv` will take care of that (by installing them **very fast** in a temporary environment). (Inspired by Simon W.
 
 
-## Usage
+## How To Use
 
 ### Python scripts
 
