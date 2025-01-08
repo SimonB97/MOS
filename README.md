@@ -4,7 +4,7 @@ This is a collection of (mainly Python-) scripts that I have written (or modifie
 
 These scripts are designed to be run from the command line with minimal friction and in multiple environments.
 
-This is why Python-scripts include a special frontmatter which allows the awesome [uv]() python package manager to run them 'instantly', that is, without the need to install any dependencies manually first because `uv` will take care of that for you (by installing them **fast** in a temporary environment).
+This is why Python-scripts include a special frontmatter which allows the **awesome** [uv](https://docs.astral.sh/uv/) python package manager to run them 'instantly', that is, without the need to install any dependencies manually first because `uv` will take care of that (by installing them **very fast** in a temporary environment).
 
 
 ## Usage
