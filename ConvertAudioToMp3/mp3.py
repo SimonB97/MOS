@@ -15,16 +15,14 @@ import click
 def convert(input_path: str, output: str) -> None:
     src = Path(input_path)
     dst = Path(output)
-    dst.mkdir(parents=True, exist_ok=True)
+    dst.mkdir(exist_ok=True)
 
     if src.is_file():
         files = [src]
     else:
-        files = list(src.rglob('*.*'))
-
+        files = [f for f in src.rglob('*.*') if f.suffix.lower() in {'.flac', '.wav', '.m4a'}]
+        
     for f in files:
-        if f.suffix.lower() not in {'.flac', '.wav', '.m4a'}:
-            continue
         try:
             rel = f.relative_to(src) if src.is_dir() else f.name
             out = dst / rel.with_suffix('.mp3')
@@ -32,15 +30,15 @@ def convert(input_path: str, output: str) -> None:
             
             subprocess.run([
                 'ffmpeg', '-i', str(f),
-                '-codec:a', 'libmp3lame',
+                '-codec:a', 'libmp3lame', 
                 '-q:a', '2',
+                '-hide_banner',
+                '-loglevel', 'error',
                 str(out)
-            ], capture_output=True, check=True)
+            ], capture_output=True)
             print(f"Converted: {f.name}")
-        except subprocess.CalledProcessError as e:
-            print(f"Error converting {f.name}: {e.stderr.decode()}")
         except Exception as e:
-            print(f"Error with {f.name}: {e}")
+            print(f"Error converting {f.name}: {e}")
 
 if __name__ == '__main__':
     convert()
