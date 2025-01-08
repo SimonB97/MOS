@@ -27,6 +27,7 @@ sudo apt install ffmpeg
 
 ## Usage
 
+
 Basic usage:
 ```bash
 uv run mp3.py input_folder -o output_folder
@@ -40,6 +41,11 @@ uv run mp3.py input_folder -o output_folder -w 4
 Show help:
 ```bash
 uv run mp3.py -h
+```
+
+**Note:** When using `uv`, you can replace `mp3.py` with the path to the script in this repository, e.g.: 
+```bash
+uv run https://raw.githubusercontent.com/SimonB97/my-open-scripts/main/ConvertAudioToMp3/mp3.py input_folder -o output_folder
 ```
 
 ## Features
