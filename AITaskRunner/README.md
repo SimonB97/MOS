@@ -31,7 +31,7 @@ uv run m1.py "your task" --no-hil
 
 **Note:** When using `uv`, you can run directly without downloading:
 ```bash
-uv run https://raw.githubusercontent.com/SimonB97/my-open-scripts/main/AITaskRunner/m1.py "your task" [options]
+uv run https://raw.githubusercontent.com/SimonB97/MOS/main/AITaskRunner/m1.py "your task" [options]
 ```
 
 ### Setting up OpenAI API key
