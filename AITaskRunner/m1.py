@@ -2,8 +2,8 @@
 # requires-python = ">=3.8"
 # dependencies = [
 #     "click",
-#     "autogen-agentchat",
-#     "autogen-ext[magentic-one-base,openai]",
+#     "autogen-agentchat>=0.4.0",
+#     "autogen-ext[magentic-one,openai]>=0.4.0",
 # ]
 # [project.optional-dependencies]
 # web = [
@@ -17,10 +17,10 @@ import os
 from typing import List
 
 import click
-from autogen_agentchat.agents import ChatAgent, CodeExecutorAgent
+from autogen_agentchat.base import ConversableAgent as ChatAgent
 from autogen_agentchat.ui import Console
 from autogen_ext.agents.file_surfer import FileSurfer
-from autogen_ext.agents.magentic_one import MagenticOneCoderAgent
+from autogen_agentchat.agents import CodeExecutorAgent
 from autogen_ext.agents.web_surfer import MultimodalWebSurfer
 from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
 from autogen_ext.models.openai import OpenAIChatCompletionClient
@@ -71,7 +71,7 @@ async def run_task(task: str, agents: List[ChatAgent], hil: bool) -> None:
     click.echo(result)
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
-@click.argument('task (str)', type=str)
+@click.argument('task')
 @click.option('-w', '--web', is_flag=True, help='Enable web browsing capabilities')
 @click.option('--no-files', is_flag=True, help='Disable file system access (enabled by default)')
 @click.option('--no-code', is_flag=True, help='Disable code execution (enabled by default)')
