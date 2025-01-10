@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.8,<3.13"
+# requires-python = ">=3.10,<3.13"
 # dependencies = [
 #     "click>=8.0.0",
 #     "autogen-agentchat==0.4.0",
@@ -34,28 +34,10 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_ext.teams.magentic_one import MagenticOne
 
 # Suppress ResourceWarnings for now
-warnings.filterwarnings('ignore', category=ResourceWarning)
-
-# Create themed panels for different agent types
-USER_STYLE = "bold white on dark_blue"
-SYSTEM_STYLE = "bold black on grey84"
-CODER_STYLE = "bold white on dark_green"
-EXECUTOR_STYLE = "bold black on yellow4"
-FILESURFER_STYLE = "bold white on purple4"
-WEB_STYLE = "bold white on red4"
+warnings.filterwarnings('ignore', category=ResourceWarning) # TODO: Workaround! (something about asyncio)
 
 # Create console that writes to stderr to avoid interfering with command output
 console = Console(stderr=True)
-
-def get_agent_style(name: str) -> str:
-    return {
-        "User": USER_STYLE,
-        "System": SYSTEM_STYLE,
-        "Coder": CODER_STYLE,
-        "Executor": EXECUTOR_STYLE,
-        "FileSurfer": FILESURFER_STYLE,
-        "WebSurfer": WEB_STYLE,
-    }.get(name, SYSTEM_STYLE)
 
 def setup_openai_key() -> None:
     if not os.environ.get("OPENAI_API_KEY"):
@@ -83,7 +65,8 @@ def create_agents(client: OpenAIChatCompletionClient, web: bool = False,
         agents.append(FileSurfer("FileSurfer", model_client=client))
     
     if code:
-        agents.append(MagenticOneCoderAgent("Coder", model_client=client))
+        # TODO: Both: Add instructions that it should clean up files if they were just created for the purpose of completing the task (e.g. temporary files/scripts)
+        agents.append(MagenticOneCoderAgent("Coder", model_client=client)) 
         agents.append(CodeExecutorAgent("Executor", code_executor=LocalCommandLineCodeExecutor()))
     
     if not agents:
@@ -91,66 +74,68 @@ def create_agents(client: OpenAIChatCompletionClient, web: bool = False,
     
     return agents
 
-async def run_task(task: str, agents: List[AssistantAgent], hil: bool) -> None:
-    client = OpenAIChatCompletionClient(model="gpt-4o")
-    m1 = MagenticOne(client=client, hil_mode=hil)
-    
-    if agents:
-        m1._agents = agents
+async def run_task(client: OpenAIChatCompletionClient, task: str, agents: List[AssistantAgent], hil: bool) -> None:
+    try:
+        m1 = MagenticOne(client=client, hil_mode=hil) #TODO: Add Instructions that CLI is preferred over code if possible
         
-    # Show task and agents
-    console.rule("[bold blue]Task Started", style="blue")
-    console.print(f"[bold cyan]Task:[/bold cyan] {task}")
-    console.print("\n[bold cyan]Active Agents:[/bold cyan]")
-    for agent in agents:
-        console.print(f"• [green]{agent.name}[/green]")
-    console.print()
-        
-    async for message in m1.run_stream(task=task):
-        if hasattr(message, 'source'):
-            source = message.source.title()
-            content = message.content or ""
+        if agents:
+            m1._agents = agents
             
-            # Clean up content
-            content = content.strip()
+        # Show task and agents
+        console.rule("[bold blue]Task Started", style="blue")
+        console.print(f"[bold cyan]Task:[/bold cyan] {task}")
+        console.print("\n[bold cyan]Active Agents:[/bold cyan]")
+        for agent in agents:
+            console.print(f"• [green]{agent.name}[/green]")
+        console.print()
             
-            # Get the style for the agent
-            style = get_agent_style(source)
-            
-            # Determine the border color based on the source
-            if source == "User":
-                border_color = "dark_blue"
-            elif source == "MagenticOneOrchestrator":
-                border_color = "grey84"
+        async for message in m1.run_stream(task=task):
+            if hasattr(message, 'source'):
+                source = message.source.title()
+                content = message.content or ""
+                
+                # Clean up content
+                content = content.strip()
+                
+                # Define border colors based on the source
+                border_color_map = {
+                    "User": "blue",
+                    "Magenticoneorchestrator": "purple4",
+                    "Coder": "grey84",
+                    "Executor": "grey84",
+                    "FileSurfer": "grey84",
+                    "WebSurfer": "grey84"
+                }
+                border_color = border_color_map.get(source, "blue")
+                
+                # Create panel title with source
+                title = f"[bold green]{source}[/bold green]"
+                
+                # Create panel with message content
+                panel = Panel(
+                    Text(content, no_wrap=False, justify="left"),
+                    title=title,
+                    border_style=border_color,
+                    padding=(1, 2),
+                    expand=True
+                )
+                console.print(panel)
+            elif hasattr(message, 'type') and message.type == 'TextMessage':
+                # Format status messages differently but only if they're really status-like
+                content = getattr(message, 'content', str(message))
+                source = getattr(message, 'source', "")
+                if not any(name in source for name in ['Coder', 'FileSurfer', 'WebSurfer', 'Executor']):
+                    console.print(f"[dim yellow]>>> {content}[/dim yellow]", soft_wrap=True)
             else:
-                border_color = "blue"
-            
-            # Create panel title with source
-            title = f"[bold green]{source}[/bold green]"
-            
-            # Create panel with message content
-            panel = Panel(
-                Text(content, no_wrap=False, justify="left"),
-                title=title,
-                border_style=border_color,
-                padding=(1, 2),
-                expand=True
-            )
-            console.print(panel)
-        elif hasattr(message, 'type') and message.type == 'TextMessage':
-            # Format status messages differently but only if they're really status-like
-            content = getattr(message, 'content', str(message))
-            source = getattr(message, 'source', "")
-            if not any(name in source for name in ['Coder', 'FileSurfer', 'WebSurfer', 'Executor']):
-                console.print(f"[dim yellow]>>> {content}[/dim yellow]", soft_wrap=True)
-        else:
-            # Skip printing raw status objects
-            pass
-    console.rule("[bold blue]Task Completed", style="blue")
+                # Skip printing raw status objects
+                pass
+        console.rule("[bold blue]Task Completed", style="blue")
+    except Exception as e:
+        console.print(f"[bold red]An error occurred during task execution:[/bold red] {e}")
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.argument('task')
-@click.option('-w', '--web', is_flag=True, help='Enable web browsing capabilities')
+@click.option('-w', '--web', is_flag=True, help='Enable web browsing capabilities using Playwright')
 @click.option('--no-files', is_flag=True, help='Disable file system access (enabled by default)')
 @click.option('--no-code', is_flag=True, help='Disable code execution (enabled by default)')
 @click.option('--no-hil', is_flag=True, help='Disable human-in-the-loop mode (enabled by default)')
@@ -162,17 +147,23 @@ def main(task: str, web: bool, no_files: bool, no_code: bool, no_hil: bool) -> N
     Web browsing must be explicitly enabled with -w/--web.
     Use --no-files, --no-code, or --no-hil to disable default capabilities.
     """
-    setup_openai_key()
-    
-    client = OpenAIChatCompletionClient(model="gpt-4o")
-    agents = create_agents(
-        client=client,
-        web=web,
-        files=not no_files,
-        code=not no_code
-    )
-    
-    asyncio.run(run_task(task, agents, not no_hil))
+    try:
+        # Check for OpenAI API key
+        setup_openai_key()
+        
+        client = OpenAIChatCompletionClient(model="gpt-4o") # TODO: Add option to use LiteLLM proxy model
+        agents = create_agents(
+            client=client,
+            web=web,
+            files=not no_files,
+            code=not no_code
+        )
+        
+        asyncio.run(run_task(client, task, agents, not no_hil))
+    except click.UsageError as ue:
+        console.print(f"[bold red]Usage Error:[/bold red] {ue}")
+    except Exception as e:
+        console.print(f"[bold red]An unexpected error occurred:[/bold red] {e}")
 
 if __name__ == "__main__":
     main()
