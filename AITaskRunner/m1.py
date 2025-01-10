@@ -1,9 +1,9 @@
 # /// script
-# requires-python = ">=3.8"
+# requires-python = ">=3.8,<3.13"
 # dependencies = [
 #     "click",
-#     "autogen-agentchat>=0.4.0",
-#     "autogen-ext[magentic-one,openai]>=0.4.0",
+#     "autogen-agentchat",
+#     "autogen-ext[magentic-one,openai]",
 # ]
 # [project.optional-dependencies]
 # web = [
@@ -17,10 +17,10 @@ import os
 from typing import List
 
 import click
-from autogen_agentchat.base import ConversableAgent as ChatAgent
+from autogen_agentchat.agents import AssistantAgent, CodeExecutorAgent
 from autogen_agentchat.ui import Console
 from autogen_ext.agents.file_surfer import FileSurfer
-from autogen_agentchat.agents import CodeExecutorAgent
+from autogen_ext.agents.magentic_one import MagenticOneCoderAgent
 from autogen_ext.agents.web_surfer import MultimodalWebSurfer
 from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
 from autogen_ext.models.openai import OpenAIChatCompletionClient
@@ -41,8 +41,8 @@ def check_web_dependencies() -> None:
         )
 
 def create_agents(client: OpenAIChatCompletionClient, web: bool = False, 
-                 files: bool = True, code: bool = True) -> List[ChatAgent]:
-    agents: List[ChatAgent] = []
+                 files: bool = True, code: bool = True) -> List[AssistantAgent]:
+    agents: List[AssistantAgent] = []
     
     if web:
         check_web_dependencies()
@@ -60,7 +60,7 @@ def create_agents(client: OpenAIChatCompletionClient, web: bool = False,
     
     return agents
 
-async def run_task(task: str, agents: List[ChatAgent], hil: bool) -> None:
+async def run_task(task: str, agents: List[AssistantAgent], hil: bool) -> None:
     client = OpenAIChatCompletionClient(model="gpt-4o")
     m1 = MagenticOne(client=client, hil_mode=hil)
     
