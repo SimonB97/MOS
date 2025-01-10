@@ -36,7 +36,7 @@ uv run nb2md.py -h
 
 > **Recommended:** When using `uv`, you can replace `nb2md.py` with the path to the script in this repository, so you don't need to save the file first, e.g.: 
 > ```bash
-> uv run https://raw.githubusercontent.com/SimonB97/my-open-scripts/main/NotebookToMarkdown/nb2md.py input_folder -o output_folder
+> uv run https://raw.githubusercontent.com/SimonB97/MOS/main/NotebookToMarkdown/nb2md.py input_folder -o output_folder
 > ```
 > 
 > **Alternatively**, you can download the script and **run it directly with Python/pip.**
