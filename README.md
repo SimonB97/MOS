@@ -30,7 +30,7 @@ Replace `<path-to-script>` with the path to the script you want to run, and `<ar
 
 **Example:**
 
-Running the [Audio Converter Script](https://github.com/SimonB97/my-open-scripts/tree/main/ConvertAudioToMp3) 
+Running the [Audio Converter Script](https://github.com/SimonB97/my-open-scripts/tree/main/ConvertAudioToMp3):
 ```bash
 uv run https://raw.githubusercontent.com/SimonB97/MOS/main/ConvertAudioToMp3/mp3.py input_folder -o output_folder
 ```
