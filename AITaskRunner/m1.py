@@ -1,30 +1,43 @@
 # /// script
 # requires-python = ">=3.8,<3.13"
 # dependencies = [
-#     "click",
-#     "autogen-agentchat",
-#     "autogen-ext[magentic-one,openai]",
+#     "click>=8.0.0",
+#     "autogen-agentchat==0.4.0",
+#     "autogen-ext[magentic-one,openai]==0.4.0",
+#     "rich>=13.7.0",
 # ]
 # [project.optional-dependencies]
 # web = [
-#     "autogen-ext[web]",
-#     "playwright",
+#     "autogen-ext[web]==0.4.0",
+#     "playwright>=1.41.0",
 # ]
 # ///
 
 import asyncio
 import os
-from typing import List
+import sys
+import warnings
+from contextlib import asynccontextmanager
+from typing import AsyncIterator, List
 
 import click
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
 from autogen_agentchat.agents import AssistantAgent, CodeExecutorAgent
-from autogen_agentchat.ui import Console
+from autogen_agentchat.ui import Console as AgentConsole
 from autogen_ext.agents.file_surfer import FileSurfer
 from autogen_ext.agents.magentic_one import MagenticOneCoderAgent
 from autogen_ext.agents.web_surfer import MultimodalWebSurfer
 from autogen_ext.code_executors.local import LocalCommandLineCodeExecutor
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_ext.teams.magentic_one import MagenticOne
+
+# Suppress ResourceWarnings for now
+warnings.filterwarnings('ignore', category=ResourceWarning)
+
+# Create console that writes to stderr to avoid interfering with command output
+console = Console(stderr=True)
 
 def setup_openai_key() -> None:
     if not os.environ.get("OPENAI_API_KEY"):
@@ -67,8 +80,46 @@ async def run_task(task: str, agents: List[AssistantAgent], hil: bool) -> None:
     if agents:
         m1._agents = agents
         
-    result = await Console(m1.run_stream(task=task))
-    click.echo(result)
+    # Show task and agents
+    console.rule("[bold blue]Task Started", style="blue")
+    console.print(f"[bold cyan]Task:[/bold cyan] {task}")
+    console.print("\n[bold cyan]Active Agents:[/bold cyan]")
+    for agent in agents:
+        console.print(f"• [green]{agent.name}[/green]")
+    console.print()
+        
+    async for message in m1.run_stream(task=task):
+        if hasattr(message, 'role'):
+            role = message.role.title()
+            name = getattr(message, 'name', role)
+            content = message.content or ""
+            
+            # Clean up content
+            content = content.strip()
+            
+            # Create panel title with role if different from name
+            title = f"[bold green]{name}[/bold green]"
+            if name != role:
+                title += f" [dim]({role})[/dim]"
+            
+            # Create panel with message content
+            panel = Panel(
+                Text(content, no_wrap=False, justify="left"),
+                title=title,
+                border_style="blue",
+                padding=(1, 2),
+                expand=True
+            )
+            console.print(panel)
+        elif hasattr(message, 'type') and message.type == 'TextMessage':
+            # Format status messages differently but only if they're really status-like
+            content = getattr(message, 'content', str(message))
+            if not any(name in content for name in ['Coder', 'FileSurfer', 'WebSurfer', 'Executor']):
+                console.print(f"[dim yellow]>>> {content}[/dim yellow]", soft_wrap=True)
+        else:
+            # Skip printing raw status objects
+            pass
+    console.rule("[bold blue]Task Completed", style="blue")
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.argument('task')
