@@ -75,14 +75,14 @@ async def run_task(task: str, agents: List[ChatAgent], hil: bool) -> None:
 @click.option('-w', '--web', is_flag=True, help='Enable web browsing capabilities')
 @click.option('--no-files', is_flag=True, help='Disable file system access (enabled by default)')
 @click.option('--no-code', is_flag=True, help='Disable code execution (enabled by default)')
-@click.option('--hil', is_flag=True, help='Enable human-in-the-loop mode')
-def main(task: str, web: bool, no_files: bool, no_code: bool, hil: bool) -> None:
+@click.option('--no-hil', is_flag=True, help='Disable human-in-the-loop mode (enabled by default)')
+def main(task: str, web: bool, no_files: bool, no_code: bool, no_hil: bool) -> None:
     """
     Run a task using MagenticOne with configurable capabilities.
     
-    By default, file system access and code execution are enabled.
+    By default, file system access, code execution and human-in-the-loop mode are enabled.
     Web browsing must be explicitly enabled with -w/--web.
-    Use --no-files or --no-code to disable default capabilities.
+    Use --no-files, --no-code, or --no-hil to disable default capabilities.
     """
     setup_openai_key()
     
@@ -94,7 +94,7 @@ def main(task: str, web: bool, no_files: bool, no_code: bool, hil: bool) -> None
         code=not no_code
     )
     
-    asyncio.run(run_task(task, agents, hil))
+    asyncio.run(run_task(task, agents, not no_hil))
 
 if __name__ == "__main__":
     main()

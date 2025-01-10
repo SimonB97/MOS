@@ -1,6 +1,8 @@
 # AI Task Runner
 
-Run complex tasks using AI agents to write code, analyze files, and browse the web. Each task is broken down and handled by specialized AI agents with optional human oversight. Built on Microsoft's [MagenticOne](https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/magentic-one.html#), a generalist multi-agent system for solving complex tasks.
+Run diverse complex tasks using AI agents (1) to write code, analyze files, and browse the web. Each task is broken down and handled by specialized AI agents with optional human oversight. Built on Microsoft's [MagenticOne](https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/magentic-one.html#), a generalist multi-agent system for solving complex tasks.
+
+(1) "Agent" meaning the system described under *Agents*  in Antropic's "[Building effective agents](https://www.anthropic.com/research/building-effective-agents)"
 
 ## Requirements
 
