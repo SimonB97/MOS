@@ -71,7 +71,7 @@ async def run_task(task: str, agents: List[ChatAgent], hil: bool) -> None:
     click.echo(result)
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
-@click.argument('task')
+@click.argument('task (str)', type=str)
 @click.option('-w', '--web', is_flag=True, help='Enable web browsing capabilities')
 @click.option('--no-files', is_flag=True, help='Disable file system access (enabled by default)')
 @click.option('--no-code', is_flag=True, help='Disable code execution (enabled by default)')
