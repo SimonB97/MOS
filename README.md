@@ -15,7 +15,7 @@ This is why the Python-scripts include a special frontmatter which allows the **
 2. Run the script:
 ```bash
 # a) running a script directly (from this repository, without downloading it first)
-uv run https://raw.githubusercontent.com/SimonB97/my-open-scripts/main/<path-to-script> <args>
+uv run https://raw.githubusercontent.com/SimonB97/MOS/main/<path-to-script> <args>
 
 # b) running a script after downloading it
 uv run <path-to-script> <args>
