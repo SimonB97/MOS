@@ -36,8 +36,26 @@ from autogen_ext.teams.magentic_one import MagenticOne
 # Suppress ResourceWarnings for now
 warnings.filterwarnings('ignore', category=ResourceWarning)
 
+# Create themed panels for different agent types
+USER_STYLE = "bold white on dark_blue"
+SYSTEM_STYLE = "bold black on grey84"
+CODER_STYLE = "bold white on dark_green"
+EXECUTOR_STYLE = "bold black on yellow4"
+FILESURFER_STYLE = "bold white on purple4"
+WEB_STYLE = "bold white on red4"
+
 # Create console that writes to stderr to avoid interfering with command output
 console = Console(stderr=True)
+
+def get_agent_style(name: str) -> str:
+    return {
+        "User": USER_STYLE,
+        "System": SYSTEM_STYLE,
+        "Coder": CODER_STYLE,
+        "Executor": EXECUTOR_STYLE,
+        "FileSurfer": FILESURFER_STYLE,
+        "WebSurfer": WEB_STYLE,
+    }.get(name, SYSTEM_STYLE)
 
 def setup_openai_key() -> None:
     if not os.environ.get("OPENAI_API_KEY"):
@@ -89,24 +107,32 @@ async def run_task(task: str, agents: List[AssistantAgent], hil: bool) -> None:
     console.print()
         
     async for message in m1.run_stream(task=task):
-        if hasattr(message, 'role'):
-            role = message.role.title()
-            name = getattr(message, 'name', role)
+        if hasattr(message, 'source'):
+            source = message.source.title()
             content = message.content or ""
             
             # Clean up content
             content = content.strip()
             
-            # Create panel title with role if different from name
-            title = f"[bold green]{name}[/bold green]"
-            if name != role:
-                title += f" [dim]({role})[/dim]"
+            # Get the style for the agent
+            style = get_agent_style(source)
+            
+            # Determine the border color based on the source
+            if source == "User":
+                border_color = "dark_blue"
+            elif source == "MagenticOneOrchestrator":
+                border_color = "grey84"
+            else:
+                border_color = "blue"
+            
+            # Create panel title with source
+            title = f"[bold green]{source}[/bold green]"
             
             # Create panel with message content
             panel = Panel(
                 Text(content, no_wrap=False, justify="left"),
                 title=title,
-                border_style="blue",
+                border_style=border_color,
                 padding=(1, 2),
                 expand=True
             )
@@ -114,7 +140,8 @@ async def run_task(task: str, agents: List[AssistantAgent], hil: bool) -> None:
         elif hasattr(message, 'type') and message.type == 'TextMessage':
             # Format status messages differently but only if they're really status-like
             content = getattr(message, 'content', str(message))
-            if not any(name in content for name in ['Coder', 'FileSurfer', 'WebSurfer', 'Executor']):
+            source = getattr(message, 'source', "")
+            if not any(name in source for name in ['Coder', 'FileSurfer', 'WebSurfer', 'Executor']):
                 console.print(f"[dim yellow]>>> {content}[/dim yellow]", soft_wrap=True)
         else:
             # Skip printing raw status objects
