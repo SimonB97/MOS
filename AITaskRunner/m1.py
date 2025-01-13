@@ -91,7 +91,6 @@ async def run_task(client: OpenAIChatCompletionClient, task: str, agents: List[A
             
         async for message in m1.run_stream(task=task):
             if hasattr(message, 'source'):
-                print(message)
 
                 source = message.source.title()
                 content = message.content or ""
