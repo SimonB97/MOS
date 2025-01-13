@@ -67,7 +67,7 @@ def create_agents(client: OpenAIChatCompletionClient, web: bool = False,
     if code:
         # TODO: Both: Add instructions that it should clean up files if they were just created for the purpose of completing the task (e.g. temporary files/scripts)
         agents.append(MagenticOneCoderAgent("Coder", model_client=client)) 
-        agents.append(CodeExecutorAgent("Executor", code_executor=LocalCommandLineCodeExecutor()))
+        agents.append(CodeExecutorAgent("Executor", code_executor=LocalCommandLineCodeExecutor())) # TODO: Add instructions based on shell its executed in (e.g. bash, cmd, powershell) such that it chooses compatible commands
     
     if not agents:
         raise click.UsageError("At least one capability must be enabled")
@@ -91,6 +91,8 @@ async def run_task(client: OpenAIChatCompletionClient, task: str, agents: List[A
             
         async for message in m1.run_stream(task=task):
             if hasattr(message, 'source'):
+                print(message)
+
                 source = message.source.title()
                 content = message.content or ""
                 
