@@ -4,7 +4,7 @@ This is a collection of (mainly Python-) scripts that I have written (or modifie
 
 These scripts are designed to be run from the command line with minimal friction and in multiple environments.
 
-This is why the Python-scripts include a special frontmatter which allows the **awesome** [uv](https://docs.astral.sh/uv/) Python package manager to run them 'instantly', that is, without the need to install any dependencies manually first because `uv` will take care of that (by installing them **very fast** in a temporary environment). (Inspired by Simon Willison's [blog post](https://simonwillison.net/2024/Dec/19/one-shot-python-tools/))
+This is why the Python-scripts include special [inline script metadata](https://peps.python.org/pep-0723/) which allow the **awesome** [uv](https://docs.astral.sh/uv/) Python package manager to run them instantly - that is, without the need to install any dependencies manually first because `uv` will take care of that (by installing them **very fast** in a temporary environment). (Inspired by Simon Willison's [blog post](https://simonwillison.net/2024/Dec/19/one-shot-python-tools/))
 
 
 ## How To Use
@@ -15,7 +15,7 @@ This is why the Python-scripts include a special frontmatter which allows the **
 2. Run the script:
 ```bash
 # a) running a script directly (from this repository, without downloading it first)
-uv run https://raw.githubusercontent.com/SimonB97/my-open-scripts/main/<path-to-script> <args>
+uv run https://raw.githubusercontent.com/SimonB97/MOS/main/<path-to-script> <args>
 
 # b) running a script after downloading it
 uv run <path-to-script> <args>
@@ -30,7 +30,7 @@ Replace `<path-to-script>` with the path to the script you want to run, and `<ar
 
 **Example:**
 
-Running the [Audio Converter Script](https://github.com/SimonB97/my-open-scripts/tree/main/ConvertAudioToMp3) 
+Running the [Audio Converter](https://github.com/SimonB97/my-open-scripts/tree/main/ConvertAudioToMp3):
 ```bash
-uv run https://raw.githubusercontent.com/SimonB97/my-open-scripts/main/ConvertAudioToMp3/mp3.py input_folder -o output_folder
+uv run https://raw.githubusercontent.com/SimonB97/MOS/main/ConvertAudioToMp3/mp3.py input_folder -o output_folder
 ```
