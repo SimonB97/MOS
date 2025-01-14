@@ -4,7 +4,7 @@ This is a collection of (mainly Python-) scripts that I have written (or modifie
 
 These scripts are designed to be run from the command line with minimal friction and in multiple environments.
 
-This is why the Python-scripts include a special frontmatter which allows the **awesome** [uv](https://docs.astral.sh/uv/) Python package manager to run them 'instantly', that is, without the need to install any dependencies manually first because `uv` will take care of that (by installing them **very fast** in a temporary environment). (Inspired by Simon Willison's [blog post](https://simonwillison.net/2024/Dec/19/one-shot-python-tools/))
+This is why the Python-scripts include special [inline script metadata](https://peps.python.org/pep-0723/) which allow the **awesome** [uv](https://docs.astral.sh/uv/) Python package manager to run them instantly - that is, without the need to install any dependencies manually first because `uv` will take care of that (by installing them **very fast** in a temporary environment). (Inspired by Simon Willison's [blog post](https://simonwillison.net/2024/Dec/19/one-shot-python-tools/))
 
 
 ## How To Use
