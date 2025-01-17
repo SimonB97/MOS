@@ -291,7 +291,6 @@ def find_and_click(image: Image.Image, name: str, threshold: float = 0.9) -> Non
 @click.command()
 @click.option('-c', '--calibrate', is_flag=True, help='Run calibration mode')
 @click.option('-l', '--load-config', is_flag=True, help='Load calibrated button data')
-@click.option('-t', '--threshold', default=0.9, help='Confidence threshold for matches')
 def main(calibrate: bool, load_config: bool) -> None:
     pyautogui.FAILSAFE = False
     
