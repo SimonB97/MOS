@@ -59,6 +59,18 @@ class CalibrationManager:
         self.current_samples: Dict[str, List[ButtonFeatures]] = {"launcher": [], "website": []}
         self.load_config()
 
+    def load_config(self) -> None:
+        if os.path.exists(self.config_path):
+            with open(self.config_path, 'r') as f:
+                data = json.load(f)
+                self.calibration_data = {
+                    k: ButtonData(**v) for k, v in data.items()
+                }
+
+    def save_config(self) -> None:
+        with open(self.config_path, 'w') as f:
+            json.dump(self.calibration_data, f, default=lambda x: x.__dict__)
+
     def extract_features(self, image: np.ndarray, click_pos: Tuple[int, int], region: Tuple[int, int, int, int]) -> ButtonFeatures:
         x, y, w, h = region
         button_img = image[y:y+h, x:x+w]
