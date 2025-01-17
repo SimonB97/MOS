@@ -44,6 +44,14 @@ class CalibrationData:
     success_rate: float
     timestamp: float
 
+@dataclass
+class ButtonData:
+    image: str  # base64
+    text: str
+    region: Tuple[int, int, int, int]
+    click_offset: Tuple[int, int]
+    timestamp: float
+
 class CalibrationManager:
     def __init__(self, config_path: str = "button_calibration.json"):
         self.config_path = config_path
