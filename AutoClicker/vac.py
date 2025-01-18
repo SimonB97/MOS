@@ -173,18 +173,14 @@ class CalibrationManager:
         
         return ButtonData(image=self._np_to_base64(button_img), text=text, region=button_region, click_offset=click_offset, timestamp=time.time())
 
-    def run_calibration(self) -> None:
-        button_types = ["launcher", "website"]
-        for button_type in button_types:
-            for i in range(3):
-                print(f"\nCalibrating {button_type} button ({i+1}/3)")
-                button_data = self.capture_button(button_type)
-                if button_data:
-                    self.calibration_data[f"{button_type}_{i}"] = button_data
-                    print(f"Successfully captured {button_type} button")
-                else:
-                    print("Calibration cancelled")
-                    return
+    def run_calibration(self, button_type: str) -> None:
+        print(f"\nCalibrating {button_type} button")
+        for i in range(3):
+            print(f"\nCapture {i+1}/3")
+            button_data = self.capture_button(button_type)
+            if button_data:
+                self.calibration_data[f"{button_type}_{i}"] = button_data
+                print(f"Successfully captured {button_type} button")
         
         if click.confirm("Save calibration data for future use?"):
             self.save_config()
@@ -232,14 +228,15 @@ def find_and_click(image: Image.Image, name: str, threshold: float = 0.9) -> Non
         time.sleep(3)
 
 @click.command()
-@click.option('-c', '--calibrate', is_flag=True, help='Run calibration mode')
+@click.option('-c', '--calibrate', type=click.Choice(['web', 'launcher']), help='Run calibration mode for specific button')
 @click.option('-l', '--load-config', is_flag=True, help='Load calibrated button data')
-def main(calibrate: bool, load_config: bool) -> None:
+def main(calibrate: str, load_config: bool) -> None:
     pyautogui.FAILSAFE = False
     
     if calibrate:
+        button_type = "website" if calibrate == "web" else "launcher"
         calibration = CalibrationManager()
-        calibration.run_calibration()
+        calibration.run_calibration(button_type)
         return
         
     if load_config:
