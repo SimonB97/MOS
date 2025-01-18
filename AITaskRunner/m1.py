@@ -2,8 +2,8 @@
 # requires-python = ">=3.10,<3.13"
 # dependencies = [
 #     "click>=8.0.0",
-#     "autogen-agentchat==0.4.0",
-#     "autogen-ext[magentic-one,openai]==0.4.0",
+#     "autogen-agentchat==0.4.2",
+#     "autogen-ext[magentic-one,openai]==0.4.2",
 #     "rich>=13.7.0",
 # ]
 # [project.optional-dependencies]
