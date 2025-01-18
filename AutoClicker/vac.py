@@ -182,8 +182,15 @@ class CalibrationManager:
                 self.calibration_data[f"{button_type}_{i}"] = button_data
                 print(f"Successfully captured {button_type} button")
         
-        if click.confirm("Save calibration data for future use?"):
+        save_choice = click.confirm("Save calibration data for future use?")
+        if save_choice:
             self.save_config()
+            
+        # Start auto-clicking after calibration
+        button_img = base64_to_image(self.calibration_data[f"{button_type}_0"].image)
+        print("Starting auto-clicker. Press Ctrl+C to exit.")
+        while True:
+            find_and_click(button_img, f"{button_type} Download")
 
     @staticmethod
     def _find_button(image: np.ndarray) -> Optional[Tuple[int, int, int, int]]:
