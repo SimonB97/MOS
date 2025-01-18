@@ -52,11 +52,18 @@ class ButtonData:
     click_offset: Tuple[int, int]
     timestamp: float
 
+@dataclass
+class ButtonMatch:
+    region: Tuple[int, int, int, int]
+    confidence: float
+    screenshot: np.ndarray
+
 class CalibrationManager:
     def __init__(self, config_path: str = "button_calibration.json"):
         self.config_path = config_path
         self.calibration_data: Dict[str, ButtonData] = {}
-        self.current_samples: Dict[str, List[ButtonFeatures]] = {"launcher": [], "website": []}
+        self.thresholds = [0.9, 0.8, 0.7, 0.6, 0.5]
+        self.max_attempts = 3
         self.load_config()
 
     def load_config(self) -> None:
@@ -143,35 +150,132 @@ class CalibrationManager:
             return 0
         return 1 - np.mean(np.abs(e1 - e2)) / 255
 
-    def capture_button(self, button_type: str) -> ButtonData:
-        print(f"Looking for {button_type} button...")
+    def capture_button(self, button_type: str) -> Optional[ButtonData]:
+        print(f"\nLooking for {button_type} button...")
         screenshot = pyautogui.screenshot()
         screenshot_np = np.array(screenshot)
-        button_region = self._find_button(screenshot_np)
-        if not button_region:
+        
+        matches = self._find_button_candidates(screenshot_np)
+        if not matches:
+            print("No button candidates found. Try adjusting lighting or window position.")
             return None
 
-        print("Press Space to confirm or click actual button location.")
-        print("Press Esc to cancel.")
+        selected_match = self._select_button_match(matches)
+        if not selected_match:
+            return None
 
-        while True:
-            if keyboard.is_pressed('space'):
-                click_pos = (button_region[0] + button_region[2] // 2, button_region[1] + button_region[3] // 2)
-                break
-            elif keyboard.is_pressed('esc'):
-                return None
-            if pyautogui.mouseDown():
-                click_pos = pyautogui.position()
-                if not self._is_in_region(click_pos, button_region):
-                    button_region = (click_pos[0] - 50, click_pos[1] - 20, 100, 40)
-                break
-            time.sleep(0.1)
+        button_region = selected_match.region
+        click_pos = self._get_click_position(button_region)
+        if not click_pos:
+            return None
 
-        button_img = screenshot_np[button_region[1]:button_region[1]+button_region[3], button_region[0]:button_region[0]+button_region[2]]
+        button_img = selected_match.screenshot[
+            button_region[1]:button_region[1]+button_region[3], 
+            button_region[0]:button_region[0]+button_region[2]
+        ]
         text = pytesseract.image_to_string(button_img).strip()
         click_offset = (click_pos[0] - button_region[0], click_pos[1] - button_region[1])
         
-        return ButtonData(image=self._np_to_base64(button_img), text=text, region=button_region, click_offset=click_offset, timestamp=time.time())
+        return ButtonData(
+            image=self._np_to_base64(button_img),
+            text=text,
+            region=button_region,
+            click_offset=click_offset,
+            timestamp=time.time()
+        )
+
+    def _find_button_candidates(self, screenshot: np.ndarray) -> List[ButtonMatch]:
+        matches = []
+        attempts = 0
+        
+        while not matches and attempts < self.max_attempts:
+            for threshold in self.thresholds:
+                try:
+                    # Convert screenshot to grayscale
+                    gray = cv2.cvtColor(screenshot, cv2.COLOR_RGB2GRAY)
+                    
+                    # Apply adaptive thresholding
+                    binary = cv2.adaptiveThreshold(
+                        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                        cv2.THRESH_BINARY_INV, 11, 2
+                    )
+                    
+                    # Find contours
+                    contours, _ = cv2.findContours(
+                        binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+                    )
+                    
+                    # Filter contours by size and shape
+                    for contour in contours:
+                        x, y, w, h = cv2.boundingRect(contour)
+                        if 80 < w < 200 and 30 < h < 60:
+                            # Calculate match confidence based on shape and size
+                            aspect_ratio = w / h
+                            size_score = min(w * h, 8000) / 8000
+                            confidence = (aspect_ratio * 0.4 + size_score * 0.6) * threshold
+                            
+                            if confidence >= threshold:
+                                matches.append(ButtonMatch(
+                                    region=(x, y, w, h),
+                                    confidence=confidence,
+                                    screenshot=screenshot
+                                ))
+                
+                except Exception as e:
+                    print(f"Error during detection: {e}")
+                    continue
+            
+            if not matches:
+                print(f"No matches found with current thresholds. Attempt {attempts + 1}/{self.max_attempts}")
+                attempts += 1
+                time.sleep(1)  # Wait before next attempt
+                screenshot = np.array(pyautogui.screenshot())
+
+        return sorted(matches, key=lambda x: x.confidence, reverse=True)
+
+    def _select_button_match(self, matches: List[ButtonMatch]) -> Optional[ButtonMatch]:
+        if not matches:
+            return None
+            
+        if len(matches) == 1:
+            match = matches[0]
+            print(f"Found button candidate with confidence: {match.confidence:.2f}")
+            return match
+            
+        print("\nMultiple button candidates found. Please select the correct one:")
+        for i, match in enumerate(matches):
+            print(f"{i + 1}: Confidence {match.confidence:.2f}")
+            # Highlight the region on screen
+            pyautogui.moveTo(match.region[0], match.region[1])
+            time.sleep(0.5)
+        
+        while True:
+            try:
+                choice = input("\nEnter number of correct button (or 0 to cancel): ")
+                if choice == "0":
+                    return None
+                index = int(choice) - 1
+                if 0 <= index < len(matches):
+                    return matches[index]
+                print("Invalid selection. Please try again.")
+            except ValueError:
+                print("Invalid input. Please enter a number.")
+
+    def _get_click_position(self, region: Tuple[int, int, int, int]) -> Optional[Tuple[int, int]]:
+        print("\nPress Space to confirm center position or click desired location.")
+        print("Press Esc to cancel.")
+        
+        while True:
+            if keyboard.is_pressed('space'):
+                return (region[0] + region[2] // 2, region[1] + region[3] // 2)
+            elif keyboard.is_pressed('esc'):
+                return None
+            elif pyautogui.mouseDown():
+                pos = pyautogui.position()
+                if self._is_in_region(pos, region):
+                    return pos
+                print("Click must be within the button region.")
+            time.sleep(0.1)
 
     def run_calibration(self, button_type: str) -> None:
         print(f"\nCalibrating {button_type} button")
