@@ -273,8 +273,10 @@ class CalibrationManager:
                         thickness)
         
         # Show preview window
-        cv2.imshow("Button Candidates", preview)
-        cv2.waitKey(1)  # Show window without blocking
+        window_name = "Button Candidates"
+        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+        cv2.imshow(window_name, preview)
+        cv2.waitKey(100)  # Give time for window to render
         
         # Print candidates info
         print("\nButton candidates found:")
@@ -285,15 +287,20 @@ class CalibrationManager:
             try:
                 choice = input("\nEnter number of correct button (or 0 to cancel): ")
                 if choice == "0":
-                    cv2.destroyAllWindows()
+                    cv2.destroyWindow(window_name)
+                    cv2.waitKey(1)  # Process window destruction
                     return None
                 index = int(choice) - 1
                 if 0 <= index < len(matches):
-                    cv2.destroyAllWindows()
+                    cv2.destroyWindow(window_name)
+                    cv2.waitKey(1)  # Process window destruction
                     return matches[index]
                 print("Invalid selection. Please try again.")
             except ValueError:
                 print("Invalid input. Please enter a number.")
+            except cv2.error:
+                print("Window closed. Cancelling selection.")
+                return None
 
     def _show_candidate(self, match: ButtonMatch, title: str) -> None:
         """Helper method to show a single candidate"""
