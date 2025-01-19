@@ -35,6 +35,11 @@ class ButtonData:
     click_offset: Tuple[int, int]
     timestamp: float
 
+def debug_print(debug_enabled: bool, message: str) -> None:
+    """Print debug messages if debug mode is enabled"""
+    if debug_enabled:
+        print(f"[DEBUG] {message}")
+
 @dataclass
 class ButtonMatch:
     region: Tuple[int, int, int, int]
@@ -42,42 +47,55 @@ class ButtonMatch:
     screenshot: np.ndarray
 
 class CalibrationManager:
-    def __init__(self, config_path: str = "button_calibration.json"):
+    def __init__(self, config_path: str = "button_calibration.json", debug: bool = False):
         self.config_path = config_path
         self.calibration_data: Dict[str, ButtonData] = {}
+        self.debug = debug
         self.load_config()
 
     def load_config(self) -> None:
+        debug_print(self.debug, "Loading configuration file...")
         if os.path.exists(self.config_path):
             with open(self.config_path, 'r') as f:
                 data = json.load(f)
                 self.calibration_data = {
                     k: ButtonData(**v) for k, v in data.items()
                 }
+            debug_print(self.debug, f"Loaded {len(self.calibration_data)} button configurations")
+        else:
+            debug_print(self.debug, "No configuration file found")
 
     def save_config(self) -> None:
         with open(self.config_path, 'w') as f:
             json.dump(self.calibration_data, f, default=lambda x: x.__dict__)
 
     def capture_button(self, button_type: str) -> Optional[ButtonData]:
-        print(f"\nLooking for {button_type} button...")
+        debug_print(self.debug, f"Starting button capture for {button_type}")
+        debug_print(self.debug, "Taking screenshot...")
         screenshot = pyautogui.screenshot()
         screenshot_np = np.array(screenshot)
         
+        debug_print(self.debug, "Searching for button candidates...")
         matches = self._find_button_candidates(screenshot_np)
         if not matches:
+            debug_print(self.debug, "No button candidates found")
             print("No button candidates found. Try adjusting window position.")
             return None
 
-        selected_match = self._select_button_match(matches[:5])  # Only show top 5 candidates
+        debug_print(self.debug, f"Found {len(matches)} potential button matches")
+        selected_match = self._select_button_match(matches[:5])
         if not selected_match:
+            debug_print(self.debug, "No button selected by user")
             return None
 
+        debug_print(self.debug, "Calculating click position...")
         button_region = selected_match.region
         click_pos = self._get_click_position(button_region)
         if not click_pos:
+            debug_print(self.debug, "Failed to determine click position")
             return None
 
+        debug_print(self.debug, "Creating button data...")
         button_img = selected_match.screenshot[
             button_region[1]:button_region[1]+button_region[3], 
             button_region[0]:button_region[0]+button_region[2]
@@ -239,50 +257,97 @@ class CalibrationManager:
         return f"data:image/png;base64,{base64.b64encode(img_byte_arr).decode()}"
 
     def run_calibration(self, button_type: str) -> None:
-        print(f"\nCalibrating {button_type} button")
+        debug_print(self.debug, f"Starting calibration for {button_type} button")
         button_data = self.capture_button(button_type)
         if button_data:
             self.calibration_data[button_type] = button_data
-            print(f"Successfully captured {button_type} button")
+            debug_print(self.debug, f"Successfully captured {button_type} button")
             self.save_config()
         
-        # Start auto-clicking after calibration
         if button_type in self.calibration_data:
+            debug_print(self.debug, "Starting auto-clicking sequence")
             button_img = base64_to_image(self.calibration_data[button_type].image)
             print("Starting auto-clicker. Press Ctrl+C to exit.")
             while True:
-                find_and_click(button_img, button_type)
+                find_and_click(button_img, button_type, debug=self.debug)
 
 def base64_to_image(base64_str: str) -> Image.Image:
     img_data = base64.b64decode(base64_str.split(',')[1])
     return Image.open(io.BytesIO(img_data))
 
-def find_and_click(image: Image.Image, name: str, threshold: float = 0.8) -> None:
-    try:
-        location = pyautogui.locateOnScreen(image, confidence=threshold)
-        if location:
-            pyautogui.click(location.left + location.width // 2, 
-                          location.top + location.height // 2)
-            print(f"Found and clicked {name}")
-            time.sleep(2)
-    except pyautogui.ImageNotFoundException:
-        print(f"{name} not found, waiting...")
-        time.sleep(3)
+def find_and_click(image: Image.Image, name: str, threshold: float = 0.8, debug: bool = False) -> None:
+    attempts = 0
+    screen_width, screen_height = pyautogui.size()
+    move_distance = int(screen_width * 0.05)  # 5% of screen width
+    move_down_distance = int(screen_height * 0.10)  # 10% of screen height
+    
+    while True:
+        try:
+            debug_print(debug, f"[{name}] Attempt {attempts + 1}")
+            location = pyautogui.locateOnScreen(image, confidence=threshold)
+            
+            if location:
+                debug_print(debug, f"[{name}] Found at {location.left},{location.top}")
+                click_x = location.left + location.width // 2
+                click_y = location.top + location.height // 2
+                pyautogui.click(click_x, click_y)
+                print(f"Found and clicked {name}")
+                
+                # Move mouse down after clicking
+                new_y = min(click_y + move_down_distance, screen_height - 1)
+                debug_print(debug, f"[{name}] Moving down {move_down_distance}px")
+                pyautogui.moveTo(click_x, new_y)
+                
+                time.sleep(1)
+                break
+                
+            print(f"{name} not found, waiting...")
+            
+        except pyautogui.ImageNotFoundException:
+            print(f"{name} not found, waiting...")
+        
+        attempts += 1
+        move_every_x_attempts = 10
+        if attempts % move_every_x_attempts == 0:
+            current_x, current_y = pyautogui.position()
+            direction = (attempts // move_every_x_attempts) % 4
+            directions = ["right", "down", "left", "up"]
+            debug_print(debug, f"[{name}] Moving {directions[direction]}")
+            
+            if direction == 0:  # Move right
+                new_x = min(current_x + move_distance, screen_width - 1)
+                pyautogui.moveTo(new_x, current_y)
+            elif direction == 1:  # Move down
+                new_y = min(current_y + move_distance, screen_height - 1)
+                pyautogui.moveTo(current_x, new_y)
+            elif direction == 2:  # Move left
+                new_x = max(current_x - move_distance, 0)
+                pyautogui.moveTo(new_x, current_y)
+            else:  # Move up
+                new_y = max(current_y - move_distance, 0)
+                pyautogui.moveTo(current_x, new_y)
+        
+        time.sleep(1)
 
 @click.command()
 @click.option('-c', '--calibrate', help='Run calibration mode for specific button')
 @click.option('-l', '--load-config', is_flag=True, help='Load calibrated button data')
-def main(calibrate: str, load_config: bool) -> None:
+@click.option('-d', '--debug', is_flag=True, help='Enable debug logging')
+def main(calibrate: str, load_config: bool, debug: bool) -> None:
+    debug_print(debug, "Starting application...")
     pyautogui.FAILSAFE = False
     
     if calibrate:
-        calibration = CalibrationManager()
+        debug_print(debug, f"Starting calibration mode for {calibrate}")
+        calibration = CalibrationManager(debug=debug)
         calibration.run_calibration(calibrate)
         return
         
     if load_config:
-        calibration = CalibrationManager()
+        debug_print(debug, "Loading configuration mode")
+        calibration = CalibrationManager(debug=debug)
         if not calibration.calibration_data:
+            debug_print(debug, "No calibration data found")
             print("No calibration data found. Run with --calibrate first.")
             return
         
@@ -290,15 +355,15 @@ def main(calibrate: str, load_config: bool) -> None:
         while True:
             for button_type, data in calibration.calibration_data.items():
                 button_img = base64_to_image(data.image)
-                find_and_click(button_img, button_type)
+                find_and_click(button_img, button_type, debug=debug)
     else:
-        # Use default images
+        debug_print(debug, "Starting default mode with built-in images")
         print("Starting auto-clicker with default buttons. Press Ctrl+C to exit.")
         while True:
             launcher_img = base64_to_image(LAUNCHER_IMG)
             website_img = base64_to_image(WEBSITE_IMG)
-            find_and_click(launcher_img, "launcher")
-            find_and_click(website_img, "website")
+            find_and_click(launcher_img, "launcher", debug=debug)
+            find_and_click(website_img, "website", debug=debug)
 
 if __name__ == "__main__":
     main()
